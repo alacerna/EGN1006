@@ -1,21 +1,21 @@
 //Inlclude Libraries
-#include <ESP32Servo.h>
+#include <Servo.h>
 
 //Define variables related to Servo
 Servo gatorHead;
-int servoPin;
+int servoPin = 9;
 int servoPos;
-float kp;
-float deadband;
+float kp = 0.01;
+float deadband = 40;
 int servoLogic;
-int responseTime;
+int responseTime = 20;
 
 //Define variables related to Flashlight
-int photoresistorDataPin;
+int photoresistorDataPin = A2;
 int photoresistorData;
-int nuclearDataPin;
-int nuclearData;
-int flashlightDataPin;
+int nuclearDataPin = 6;
+int nuclearData = 0;
+int flashlightDataPin = A6;
 int flashlightData;
 int ambientCal;
 
@@ -45,6 +45,9 @@ void setup() {
   delay(500);
   ambientCal = analogRead(photoresistorDataPin);
   delay(500);
+
+  //FOR DEBUGGING
+  Serial.begin(9600);
 }
 
 void loop() {
@@ -54,6 +57,8 @@ void loop() {
   photoresistorData = analogRead(photoresistorDataPin);
   deadbandData = analogRead(deadbandPotPin);
   sensitivityData = analogRead(sensitivityPotPin);
+
+  Serial.println(photoresistorData);
 
   handleGatorHead(nuclearData, flashlightData, photoresistorData, deadbandData, sensitivityData, responseTime);
 }
@@ -71,33 +76,41 @@ void handleGatorHead(int nuclearData, int flashlightData, int photoresistorData,
   } else {
     //gatorHead does normal things
     //Light Control Logic
-    if (flashlightData <= 100) {  //LOW END
+    if (flashlightData <= 30) {  //LOW END
       servoLogic = 0;
     }
-    if (flashlightData > 100 && flashlightData <= 240) {  //LOWER RANGE DIM BLUE
+    if (flashlightData > 30 && flashlightData <= 55.5) {  //LOWER RANGE DIM BLUE
       servoLogic = 0;
     }
-    if (flashlightData > 240 && flashlightData <= 744) {  //MID RANGE DIM ORANGE
+    if (flashlightData > 55.5 && flashlightData <= 200) {  //MID RANGE DIM ORANGE
       servoLogic = 0;
     }
-    if (flashlightData > 744 && flashlightData <= 900) {  //HIGHER RANGE BRIGHT ORANGE
+    if (flashlightData > 200 && flashlightData <= 234) {  //HIGHER RANGE BRIGHT ORANGE
       servoLogic = 1;
     }
-    if (flashlightData > 900) {  //HIGH END BRIGHT BLUE
+    if (flashlightData > 234) {  //HIGH END BRIGHT BLUE
       servoLogic = -1;
     }
+    
 
     //Servo Control Logic
     if (photoresistorData < ambientCal - deadband) {
-      if (servoPos <= 180) {
+      
         servoPos = servoPos + servoLogic*(floor((abs(photoresistorData - ambientCal) * kp)));
-      }
+        if (servoPos >=180){
+          servoPos = 180;
+        }
+      
     }
     if (photoresistorData > ambientCal + deadband) {
-      if (servoPos >= 0) {
+      
         servoPos = servoPos - servoLogic*(floor((abs(photoresistorData - ambientCal) * kp)));
-      }
+        if (servoPos <= 0){
+          servoPos = 0;
+        }
+      
     }
+    Serial.println(servoPos);
     gatorHead.write(servoPos);
     delay(responseTime);
   }
